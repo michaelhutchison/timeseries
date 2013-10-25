@@ -20,7 +20,7 @@ ObjectState::~ObjectState() {
 }
     /*****************************************************
      *  OBJECT STATE RECORD
-     *  unsigned long       object ID
+     *  unsigned            object ID
      *  double              x position
      *  double              y position
      *  double              z position
@@ -31,7 +31,7 @@ ObjectState::~ObjectState() {
      *****************************************************/
 void ObjectState::write(std::ofstream& fout) {
     // Write object ID
-    fout.write((char*)&objectID, UNSIGNEDLONG);
+    fout.write((char*)&objectID, UNSIGNED);
     // Write position
     fout.write((char*)&xPos,DOUBLE);
     fout.write((char*)&yPos,DOUBLE);
@@ -54,7 +54,7 @@ void ObjectState::write(std::ofstream& fout) {
 }
 void ObjectState::read(std::ifstream& fin) {
     // Read object ID
-    fin.read((char*)&objectID, UNSIGNEDLONG);
+    fin.read((char*)&objectID, UNSIGNED);
     // Read position
     fin.read((char*)&xPos, DOUBLE);
     fin.read((char*)&yPos, DOUBLE);
@@ -82,16 +82,16 @@ void ObjectState::read(std::ifstream& fin) {
  *  for a collection of objects in a single 
  *  time slice of the scene.
  ******************************/
-FrameState::FrameState(unsigned long id) {
+FrameState::FrameState(unsigned id) {
     frameID = id;
 }
 FrameState::~FrameState() {
     // Free dynamically allocated memory
-    for (unsigned long i=0; i < objects.size(); i++) {
+    for (unsigned i=0; i < objects.size(); i++) {
         delete objects[i];
     }
 }
-ObjectState * FrameState::get_object(unsigned long i) {
+ObjectState * FrameState::get_object(unsigned i) {
     if (i >= objects.size()) return 0;
     return objects[i];
 }
@@ -135,7 +135,7 @@ void FrameState::write(std::ofstream& fout) {
 void FrameState::read(std::ifstream& fin){
     //std::cout << "FRAME IN" << std::endl;
     read_header(fin);
-    for (unsigned long i=0; i<objects.size(); i++){
+    for (unsigned i=0; i<objects.size(); i++){
         ObjectState * o = new ObjectState;
         objects[i] = o;
         objects[i]->read(fin);
@@ -143,29 +143,29 @@ void FrameState::read(std::ifstream& fin){
 }
     /*****************************************************
      *  FRAME STATE HEADER
-     *  unsigned short      frame size in bytes
-     *  unsigned long       frame ID
-     *  unsigned long       number of objects in frame
+     *  unsigned long       frame size in bytes
+     *  unsigned int        frame ID
+     *  unsigned int        number of objects in frame
      *  unsigned short      length of each object in bytes
      *****************************************************/
 void FrameState::write_header(std::ofstream& fout) {
    // Calculate data sizes
     unsigned short singleObjectLengthInBytes = ObjectState::objectLengthInBytes;
     unsigned long allObjectsLengthInBytes = singleObjectLengthInBytes * objects.size();
-    unsigned short frameLengthInBytes = UNSIGNEDSHORT 
-                                      + UNSIGNEDLONG 
-                                      + UNSIGNEDLONG
+    unsigned long frameLengthInBytes = UNSIGNEDLONG 
+                                      + UNSIGNED 
+                                      + UNSIGNED
                                       + UNSIGNEDSHORT
                                       + allObjectsLengthInBytes;
-    unsigned long nObjects = objects.size();
+    unsigned nObjects = objects.size();
 
     
     // Write frame size in bytes
-    fout.write((char*)&frameLengthInBytes,UNSIGNEDSHORT);
+    fout.write((char*)&frameLengthInBytes,UNSIGNEDLONG);
     // Write frame ID
-    fout.write((char*)&frameID,UNSIGNEDLONG);
+    fout.write((char*)&frameID,UNSIGNED);
     // Write number of objects
-    fout.write((char*)&nObjects,UNSIGNEDLONG);
+    fout.write((char*)&nObjects,UNSIGNED);
     // Write length of an object
     fout.write((char*)&singleObjectLengthInBytes,UNSIGNEDSHORT);
     /*
@@ -177,13 +177,13 @@ void FrameState::write_header(std::ofstream& fout) {
 }
 void FrameState::read_header(std::ifstream& fin) {
     // Read frame size in bytes
-    unsigned short frameLengthInBytes;
-    fin.read((char*)&frameLengthInBytes,UNSIGNEDSHORT);
+    unsigned long frameLengthInBytes;
+    fin.read((char*)&frameLengthInBytes,UNSIGNEDLONG);
     // Read frame ID
-    fin.read((char*)&frameID,UNSIGNEDLONG);
+    fin.read((char*)&frameID,UNSIGNED);
     // Read number of objects
-    unsigned long nObjects;
-    fin.read((char*)&nObjects,UNSIGNEDLONG);
+    unsigned nObjects;
+    fin.read((char*)&nObjects,UNSIGNED);
     // Read length of an object
     unsigned short singleObjectLengthInBytes;
     fin.read((char*)&singleObjectLengthInBytes,UNSIGNEDSHORT);
@@ -194,7 +194,7 @@ void FrameState::read_header(std::ifstream& fin) {
     std::cout << " object len " << singleObjectLengthInBytes << std::endl;
     */
     // Clean and re-size objects vector
-    for (unsigned long i=0; i<objects.size(); i++) {
+    for (unsigned i=0; i<objects.size(); i++) {
         delete objects[i];
     }
     objects.resize(nObjects);
@@ -216,7 +216,7 @@ TimeSeries::~TimeSeries() {
         delete frames[i];
     }
 }
-FrameState * TimeSeries::get_frame(unsigned long i) {
+FrameState * TimeSeries::get_frame(unsigned i) {
     if (i >= frames.size()) return 0;
     return frames[i];
 }
@@ -249,16 +249,16 @@ void TimeSeries::write(const char * filename) {
     fout.open(filename, std::ios::out|std::ios::binary);
     // Write header length
     unsigned short headerLengthInBytes = UNSIGNEDSHORT 
-                                       + UNSIGNEDLONG;
+                                       + UNSIGNED;
     fout.write((char*)&headerLengthInBytes,UNSIGNEDSHORT);
     // Write number of frames
-    fout.write((char*)&nFrames,UNSIGNEDLONG);
+    fout.write((char*)&nFrames,UNSIGNED);
     /*
     std::cout << " header len " << headerLengthInBytes << std::endl;
     std::cout << " nFrames " << nFrames << std::endl;
     */
     // Write each frame
-    for (unsigned long i=0; i<frames.size(); i++) {
+    for (unsigned i=0; i<frames.size(); i++) {
         frames[i]->write(fout);
     }
     // Cleanup
@@ -279,7 +279,7 @@ void TimeSeries::read(const char * filename) {
     unsigned short headerLengthInBytes;
     fin.read((char*)&headerLengthInBytes, UNSIGNEDSHORT);
     // Read number of frames
-    fin.read((char*)&nFrames, UNSIGNEDLONG);
+    fin.read((char*)&nFrames, UNSIGNED);
     /*
     std::cout << " header len " << headerLengthInBytes << std::endl;
     std::cout << " nFrames " << nFrames << std::endl;
@@ -300,7 +300,7 @@ void TimeSeries::read(const char * filename) {
  * Model
  *  
  ******************************/
-Model::Model(unsigned long n) {
+Model::Model(unsigned n) {
     nObjects = n;
     recordFilename = new char[101];
     strncpy(recordFilename, "animation.rcd",100);
@@ -345,7 +345,7 @@ void Model::init() {
     // randomize time
     srand (time(NULL));
     // Generate initial state
-    for (unsigned long i=0; i<nObjects; i++) {
+    for (unsigned i=0; i<nObjects; i++) {
         angles[i] = RANDOMDOUBLE(0, 2*PI);
         lengths[i] = RANDOMDOUBLE(0.1, 5.0);
         positions[i].set(lengths[i]*cos(angles[i]),
@@ -374,7 +374,7 @@ void Model::advance_frame() {
      *      to their distance from the origin.
      *   objects spin on a unique rotational axis at a steady angular velocity.
      */
-    for (unsigned long i=0; i<nObjects; i++) {
+    for (unsigned i=0; i<nObjects; i++) {
         // Update angle about the origin
         double angularVelocity = 0.05/lengths[i];
         if (angularVelocity <= 0) angularVelocity = 0.01;

@@ -25,11 +25,11 @@ class ObjectState {
 public:
     ObjectState();
     ~ObjectState();
-    static const unsigned short objectLengthInBytes = UNSIGNEDLONG 
+    static const unsigned short objectLengthInBytes = UNSIGNED 
                                              + DOUBLE + DOUBLE + DOUBLE
                                              + DOUBLE + DOUBLE + DOUBLE + DOUBLE;
     /* GET OBJECT STATE */
-    unsigned long get_object_id() {return objectID;}
+    unsigned get_object_id() {return objectID;}
     double x()      {return xPos;}
     double y()      {return yPos;}
     double z()      {return zPos;}
@@ -38,7 +38,7 @@ public:
     double z_r()    {return zRot;}
     double a_r()    {return aRot;}
     /* SET OBJECT STATE */
-    void set_object_id(unsigned long id) {objectID = id;}
+    void set_object_id(unsigned id) {objectID = id;}
     void set_x(double x) {xPos=x;}
     void set_y(double y) {yPos=y;}
     void set_z(double z) {zPos=z;}
@@ -51,7 +51,7 @@ public:
     void read(std::ifstream& fin);
 private:
     /* STATE DATA */
-    unsigned long objectID;
+    unsigned objectID;
     double xPos;    // x position
     double yPos;    // y position
     double zPos;    // z position
@@ -63,12 +63,12 @@ private:
 
 class FrameState {
 public:
-    FrameState(unsigned long id);
+    FrameState(unsigned id);
     ~FrameState();
-    void set_frame_id(unsigned long id) {frameID = id;}
-    unsigned long get_frame_id()        {return frameID;}
-    unsigned long get_num_objects()     {return objects.size();}
-    ObjectState * get_object(unsigned long i);
+    void set_frame_id(unsigned id) {frameID = id;}
+    unsigned get_frame_id()        {return frameID;}
+    unsigned get_num_objects()     {return objects.size();}
+    ObjectState * get_object(unsigned i);
     void add_object(Vec3 * p);
     void add_object(Vec3 p);
     void add_object(Vec3 positions, Vec3 rotationVector, double rotationAngle);
@@ -77,7 +77,7 @@ public:
     void read(std::ifstream& fin);
 private:
     std::vector<ObjectState *> objects;
-    unsigned long frameID;
+    unsigned frameID;
     void write_header(std::ofstream& fout);
     void read_header(std::ifstream& fin);
 };
@@ -93,21 +93,21 @@ public:
     /* Reading */
     void read(const char * filename);
     /* Playback */
-    FrameState * get_frame(unsigned long i);
+    FrameState * get_frame(unsigned i);
     FrameState * get_next_frame();
 private:
     std::vector<FrameState *> frames;
-    unsigned long nFrames;
-    unsigned long nextFrameIndex;
+    unsigned nFrames;
+    unsigned nextFrameIndex;
 };
 
 class Model {
 public:
-    Model(unsigned long n);
+    Model(unsigned n);
     ~Model();
     void get_next_object_state(Vec3 ** pos, Vec3 ** rotationVector, double ** rotationAngle);
     void set_filename(char * newFilename);
-    unsigned long get_num_objects() {return nObjects;}
+    unsigned get_num_objects() {return nObjects;}
     void init();
     void record_frame();
     void finalize_record()  {finalize_record(recordFilename);}
@@ -115,11 +115,11 @@ public:
     void advance_frame();
 private:
     /* For real time animation */
-    unsigned long next_object_index;
+    unsigned next_object_index;
 
     char * recordFilename;
     TimeSeries timeseries;
-    unsigned long nObjects;
+    unsigned nObjects;
     /* State data */
     Vec3 * positions;
     Vec3 * rotationVectors;
