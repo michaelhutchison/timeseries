@@ -60,7 +60,7 @@ void Scene::display() {
     if (frame != 0) {
         unsigned long nObjects = frame->get_num_objects();
         for (unsigned long i=0; i<nObjects; i++) {
-            ObjectState * o = frame->get_object(i);
+            Object * o = frame->get_object(i);
             if (o != 0) {
                 // Draw an object from the animation record file
                 Cube(o->x(), o->y(), o->z(),

@@ -1,21 +1,17 @@
 #include "Model.h"
 
 /******************************
- * ObjectState
- *  Stores position and orientation for
- *  a single item in the scene.
+ * ObjectRecord
+ *  Writes the state of a single object in the scene 
+ *  to the timeseries record.
  ******************************/
-ObjectState::ObjectState() {
-    objectID = 0;
-    xPos = 0;    // x position
-    yPos = 0;    // y position
-    zPos = 0;    // z position
-    xRot = 0;    // x of rotation vector
-    yRot = 0;    // y of rotation vector
-    zRot = 0;    // z of rotation vector
-    aRot = 0;    // angle of rotation
+ObjectRecord::ObjectRecord() {
+
 }
-ObjectState::~ObjectState() {
+ObjectRecord::ObjectRecord(Object obj) {
+    object = obj;
+}
+ObjectRecord::~ObjectRecord() {
 
 }
     /*****************************************************
@@ -29,18 +25,23 @@ ObjectState::~ObjectState() {
      *  double              z of rotation vector
      *  double              angle of rotation
      *****************************************************/
-void ObjectState::write(std::ofstream& fout) {
+void ObjectRecord::write(std::ofstream& fout) {
+    // Copy data from object
+    unsigned id = object.getID();
+    Vec3 position = object.getPosition();
+    Vec3 rotation = object.getRotationVector();
+    double angle = object.getRotationAngle();
     // Write object ID
-    fout.write((char*)&objectID, UNSIGNED);
+    fout.write((char*)&id, UNSIGNED);
     // Write position
-    fout.write((char*)&xPos,DOUBLE);
-    fout.write((char*)&yPos,DOUBLE);
-    fout.write((char*)&zPos,DOUBLE);
+    fout.write((char*)&position.x,DOUBLE);
+    fout.write((char*)&position.y,DOUBLE);
+    fout.write((char*)&position.z,DOUBLE);
     // Write orientation 
-    fout.write((char*)&xRot,DOUBLE);
-    fout.write((char*)&yRot,DOUBLE);
-    fout.write((char*)&zRot,DOUBLE);
-    fout.write((char*)&aRot,DOUBLE);
+    fout.write((char*)&rotation.x,DOUBLE);
+    fout.write((char*)&rotation.y,DOUBLE);
+    fout.write((char*)&rotation.z,DOUBLE);
+    fout.write((char*)&angle,DOUBLE);
     /* 
     std::cout << "   object ID " << objectID << std::endl;
     std::cout << "   x pos " << xPos << std::endl;
@@ -52,18 +53,28 @@ void ObjectState::write(std::ofstream& fout) {
     std::cout << "   a rot " << aRot << std::endl;
     */
 }
-void ObjectState::read(std::ifstream& fin) {
+void ObjectRecord::read(std::ifstream& fin) {
+    // Create local buffers for incoming data
+    unsigned id;
+    Vec3 position;
+    Vec3 rotation;
+    double angle;
     // Read object ID
-    fin.read((char*)&objectID, UNSIGNED);
+    fin.read((char*)&id, UNSIGNED);
     // Read position
-    fin.read((char*)&xPos, DOUBLE);
-    fin.read((char*)&yPos, DOUBLE);
-    fin.read((char*)&zPos, DOUBLE);
+    fin.read((char*)&position.x, DOUBLE);
+    fin.read((char*)&position.y, DOUBLE);
+    fin.read((char*)&position.z, DOUBLE);
     // Read orientation
-    fin.read((char*)&xRot, DOUBLE);
-    fin.read((char*)&yRot, DOUBLE);
-    fin.read((char*)&zRot, DOUBLE);
-    fin.read((char*)&aRot, DOUBLE);
+    fin.read((char*)&rotation.x, DOUBLE);
+    fin.read((char*)&rotation.y, DOUBLE);
+    fin.read((char*)&rotation.z, DOUBLE);
+    fin.read((char*)&angle, DOUBLE);
+    // Copy local data to object state
+    object.setID(id);
+    object.setPosition(position.x, position.y, position.z);
+    object.setRotationVector(rotation.x, rotation.y, rotation.z);
+    object.setRotationAngle(angle);
     /*
     std::cout << "   object ID " << objectID << std::endl;
     std::cout << "   x pos " << xPos << std::endl;
@@ -87,58 +98,33 @@ FrameState::FrameState(unsigned id) {
 }
 FrameState::~FrameState() {
     // Free dynamically allocated memory
-    for (unsigned i=0; i < objects.size(); i++) {
-        delete objects[i];
+    for (unsigned i=0; i < objectRecords.size(); i++) {
+        delete objectRecords[i];
     }
 }
-ObjectState * FrameState::get_object(unsigned i) {
-    if (i >= objects.size()) return 0;
-    return objects[i];
+Object * FrameState::get_object(unsigned i) {
+    if (i >= objectRecords.size()) return 0;
+    Object * o = objectRecords[i]->getObjectPtr(); 
+    return o;
 }
-void FrameState::add_object(Vec3 * p) {
-    ObjectState * o = new ObjectState;
-    o->set_x(p->x);
-    o->set_y(p->y);
-    o->set_z(p->z);
-    add_object(o);
-}
-void FrameState::add_object(Vec3 p) {
-    ObjectState * o = new ObjectState;
-    o->set_x(p.x);
-    o->set_y(p.y);
-    o->set_z(p.z);
-    add_object(o);
-}
-void FrameState::add_object(Vec3 position, Vec3 rotationVector, double rotationAngle) {
-    ObjectState * o = new ObjectState;
-    // Set position
-    o->set_x(position.x);
-    o->set_y(position.y);
-    o->set_z(position.z);
-    // Set rotation vector
-    o->set_x_r(rotationVector.x);
-    o->set_y_r(rotationVector.y);
-    o->set_z_r(rotationVector.z);
-    o->set_a_r(rotationAngle);
-    add_object(o);
-}
-void FrameState::add_object(ObjectState * o) {
-    objects.push_back(o);
+void FrameState::add_object(Object * object) {
+    ObjectRecord * o = new ObjectRecord(*object);
+    objectRecords.push_back(o);
 }
 void FrameState::write(std::ofstream& fout) {
     //std::cout << "FRAME " << frameID << std::endl;
     write_header(fout);
-    for (unsigned i=0; i < objects.size(); i++) {
-        objects[i]->write(fout);
+    for (unsigned i=0; i < objectRecords.size(); i++) {
+        objectRecords[i]->write(fout);
     }
 }
 void FrameState::read(std::ifstream& fin){
     //std::cout << "FRAME IN" << std::endl;
     read_header(fin);
-    for (unsigned i=0; i<objects.size(); i++){
-        ObjectState * o = new ObjectState;
-        objects[i] = o;
-        objects[i]->read(fin);
+    for (unsigned i=0; i<objectRecords.size(); i++){
+        ObjectRecord * o = new ObjectRecord();
+        objectRecords[i] = o;
+        objectRecords[i]->read(fin);
     }
 }
     /*****************************************************
@@ -150,14 +136,14 @@ void FrameState::read(std::ifstream& fin){
      *****************************************************/
 void FrameState::write_header(std::ofstream& fout) {
    // Calculate data sizes
-    unsigned short singleObjectLengthInBytes = ObjectState::objectLengthInBytes;
-    unsigned long allObjectsLengthInBytes = singleObjectLengthInBytes * objects.size();
+    unsigned short singleObjectLengthInBytes = ObjectRecord::objectLengthInBytes;
+    unsigned long allObjectsLengthInBytes = singleObjectLengthInBytes * objectRecords.size();
     unsigned long frameLengthInBytes = UNSIGNEDLONG 
                                       + UNSIGNED 
                                       + UNSIGNED
                                       + UNSIGNEDSHORT
                                       + allObjectsLengthInBytes;
-    unsigned nObjects = objects.size();
+    unsigned nObjects = objectRecords.size();
 
     
     // Write frame size in bytes
@@ -194,10 +180,10 @@ void FrameState::read_header(std::ifstream& fin) {
     std::cout << " object len " << singleObjectLengthInBytes << std::endl;
     */
     // Clean and re-size objects vector
-    for (unsigned i=0; i<objects.size(); i++) {
-        delete objects[i];
+    for (unsigned i=0; i<objectRecords.size(); i++) {
+        delete objectRecords[i];
     }
-    objects.resize(nObjects);
+    objectRecords.resize(nObjects);
 }
 
 
@@ -226,7 +212,8 @@ FrameState * TimeSeries::get_next_frame() {
     if (nextFrameIndex >= frames.size()) nextFrameIndex = 0;
     return nextFrame;
 }
-void TimeSeries::record_frame(Vec3 * positions, Vec3 * rotationVectors, double * rotationAngles, unsigned n) {;
+
+void TimeSeries::record_frame(Object * objects, unsigned n) {;
     // Create a new frame
     FrameState * frame = new FrameState(nFrames);
     frames.push_back(frame);
@@ -234,7 +221,8 @@ void TimeSeries::record_frame(Vec3 * positions, Vec3 * rotationVectors, double *
 
     // Record each object in the frame
     for (unsigned i=0; i<n; i++) {
-        frame->add_object(positions[i],rotationVectors[i],rotationAngles[i]);
+        Object * obj_ptr = &objects[i];
+        frame->add_object(obj_ptr);
     }
 }
     /*****************************************************
@@ -297,47 +285,60 @@ void TimeSeries::read(const char * filename) {
 
 
 /******************************
+ * Object
+ *  
+ ******************************/
+Object::Object() {
+    angle = 0;
+    radius = 0;
+}
+Object::~Object() {
+
+}
+void Object::advanceFrame() {
+    /*
+     * This method defines how the objects in the space change over time.
+     *   objects rotate around the origin at a speed inversely proportional 
+     *      to their distance from the origin.
+     *   objects spin on a unique rotational axis at a steady angular velocity.
+     */
+ 
+    // Update angle about the origin
+    double angularVelocity = 0.05/radius;
+    if (angularVelocity <= 0) angularVelocity = 0.01;
+    angle += angularVelocity;
+    while (angle >= 2*PI) angle -= 2*PI;
+
+    // Update position - fixed distance from origin at the new angle
+    position.x = radius * cos(angle);
+    position.y = radius * sin(angle);
+
+    // Update rotation angle - rotation vector does not change
+    rotationAngle += rotationalVelocity;
+    while (rotationAngle >= 2*PI) rotationAngle -= 2*PI;
+}
+
+/******************************
  * Model
  *  
  ******************************/
+/* Constructor */
 Model::Model(unsigned n) {
     nObjects = n;
     recordFilename = new char[101];
     strncpy(recordFilename, "animation.rcd",100);
     next_object_index = 0;
     // Allocate memory
-    positions = new Vec3[nObjects];
-    rotationVectors = new Vec3[nObjects];
-    rotationAngles = new double[nObjects];
-    velocities = new Vec3[nObjects];
-    rotationalVelocities = new double[nObjects];
-    lengths = new double[nObjects];
-    angles = new double[nObjects];
+    objects = new Object[nObjects];
+
 }
+/* Destructor */
 Model::~Model() {
     // Release dynamically allocated memory
-    delete[] positions;
-    delete[] rotationVectors;
-    delete[] rotationAngles;
-    delete[] velocities;
-    delete[] rotationalVelocities;
-    delete[] lengths;
-    delete[] angles;
+    delete[] objects;
+    delete[] recordFilename;
 }
 
-void Model::get_next_object_state(Vec3 ** pos, Vec3 ** rotationVector, double ** rotationAngle) {
-    if (next_object_index < nObjects) {
-        *pos = &positions[next_object_index];
-        *rotationVector = &rotationVectors[next_object_index];
-        *rotationAngle = &rotationAngles[next_object_index];
-        next_object_index++;
-    }
-    else {
-        pos = 0;
-        rotationVector = 0;
-        rotationAngle = 0;
-    }
-}
 void Model::set_filename(char * newFilename) {
     strncpy(recordFilename, newFilename, 100);
 }
@@ -346,21 +347,24 @@ void Model::init() {
     srand (time(NULL));
     // Generate initial state
     for (unsigned i=0; i<nObjects; i++) {
-        angles[i] = RANDOMDOUBLE(0, 2*PI);
-        lengths[i] = RANDOMDOUBLE(0.1, 5.0);
-        positions[i].set(lengths[i]*cos(angles[i]),
-                         lengths[i]*sin(angles[i]),
-                         RANDOMDOUBLE(-3.0,3.0) );
-        rotationVectors[i].set(RANDOMDOUBLE(-1.0,1.0),
+        // Initialize object i
+        double angle = RANDOMDOUBLE(0, 2*PI);
+        objects[i].setAngle(angle);
+        double radius = RANDOMDOUBLE(0.1, 5.0);
+        objects[i].setRadius(radius);
+        objects[i].setPosition(radius*cos(angle),
+                               radius*sin(angle),
+                               RANDOMDOUBLE(-3.0,3.0) );
+        objects[i].setRotationVector(RANDOMDOUBLE(-1.0,1.0),
                                RANDOMDOUBLE(-1.0,1.0),
                                RANDOMDOUBLE(-1.0,1.0));
-        rotationAngles[i] = RANDOMDOUBLE(0,2*PI);
-        rotationalVelocities[i] = RANDOMDOUBLE(-5,5);
+        objects[i].setRotationAngle(RANDOMDOUBLE(0,2*PI));
+        objects[i].setRotationVelocity(RANDOMDOUBLE(-5,5));
     }
 }
 void Model::record_frame() {
     // Save the current frame to the animation record
-    timeseries.record_frame(positions,rotationVectors,rotationAngles, nObjects);
+    timeseries.record_frame(objects, nObjects);
 
 }
 void Model::finalize_record(const char * filename) {
@@ -368,28 +372,8 @@ void Model::finalize_record(const char * filename) {
     timeseries.write(filename);
 }
 void Model::advance_frame() {
-    /*
-     * This method defines how the objects in the space change over time.
-     *   objects rotate around the origin at a speed inversely proportional 
-     *      to their distance from the origin.
-     *   objects spin on a unique rotational axis at a steady angular velocity.
-     */
     for (unsigned i=0; i<nObjects; i++) {
-        // Update angle about the origin
-        double angularVelocity = 0.05/lengths[i];
-        if (angularVelocity <= 0) angularVelocity = 0.01;
-        angles[i] += angularVelocity;
-        if (angles[i] > 2*PI) angles[i] -= 2*PI;
-
-        // Update position - fixed distance from origin at the new angle
-        positions[i].x = lengths[i]*cos(angles[i]);
-        positions[i].y = lengths[i]*sin(angles[i]);
-
-        // Update rotation angle - rotation vector does not change
-        rotationAngles[i] += rotationalVelocities[i];
-        //while (rotationAngles[i] > 2*PI) rotationAngles[i] -= 2*PI;
-        //while (rotationAngles[i] < -2*PI) rotationAngles[i] += 2*PI;
-        //if (rotationAngles[i] > 2*PI) rotationAngles[i] -= 2*PI;
+        objects[i].advanceFrame();
     }
     next_object_index = 0;
 }

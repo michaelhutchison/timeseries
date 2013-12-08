@@ -1,5 +1,5 @@
 #  List of all programs you want to build
-EX=main simulator
+EX=main simulator 
 OBJ=graphicslib.o View.o Light.o Scene.o Mouse.o Texture.o vec3.o Model.o simulator.o
 DATA=timeseries.rcd
 #  Libraries - Linux

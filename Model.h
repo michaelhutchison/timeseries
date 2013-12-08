@@ -21,44 +21,69 @@
 #define LONG sizeof(long)
 #define DOUBLE sizeof(double)
 
-class ObjectState {
+class Object {
 public:
-    ObjectState();
-    ~ObjectState();
+    Object();
+    ~Object();
+    /* getters */
+    double x() {return position.x;}
+    double y() {return position.y;}
+    double z() {return position.z;}
+    double a_r() {return rotationAngle;}
+    double x_r() {return rotationVector.x;}
+    double y_r() {return rotationVector.y;}
+    double z_r() {return rotationVector.z;}
+    unsigned getID() {return id;}
+    Vec3 getPosition() {return position;}
+    Vec3 getRotationVector() {return rotationVector;}
+    double getRotationAngle() {return rotationAngle;}
+    /* setters */
+    void setID(unsigned i) {id = i;}
+    void setPosition(double x, double y, double z) {position.set(x,y,z);} 
+    void setVelocity(double x, double y, double z) {velocity.set(x,y,z);} 
+    void setRotationVector(double x, double y, double z) {rotationVector.set(x,y,z);} 
+    void setRotationAngle(double a) {rotationAngle = a;}
+    void setRotationVelocity(double v) {rotationalVelocity = v;}
+    /* Model-specific methods */
+    void setAngle(double a) {angle = a;}
+    void setRadius(double r) {radius = r;}
+    double getAngle() {return angle;}
+    double getRadius() {return radius;}
+    void advanceFrame();
+
+private:
+    unsigned id;
+    int objectType;
+    /* State data */
+    Vec3 position;
+    Vec3 rotationVector;
+    double rotationAngle;
+    /* Transitional data */
+    Vec3 velocity;
+    double rotationalVelocity;
+    /* Model-specific data */
+    double radius; // distance from origin
+    double angle;  // angle about the z-plane
+
+};
+
+
+// Class definitions
+class ObjectRecord {
+public:
+    ObjectRecord();
+    ObjectRecord(Object obj);
+    ~ObjectRecord();
     static const unsigned short objectLengthInBytes = UNSIGNED 
                                              + DOUBLE + DOUBLE + DOUBLE
                                              + DOUBLE + DOUBLE + DOUBLE + DOUBLE;
-    /* GET OBJECT STATE */
-    unsigned get_object_id() {return objectID;}
-    double x()      {return xPos;}
-    double y()      {return yPos;}
-    double z()      {return zPos;}
-    double x_r()    {return xRot;}
-    double y_r()    {return yRot;}
-    double z_r()    {return zRot;}
-    double a_r()    {return aRot;}
-    /* SET OBJECT STATE */
-    void set_object_id(unsigned id) {objectID = id;}
-    void set_x(double x) {xPos=x;}
-    void set_y(double y) {yPos=y;}
-    void set_z(double z) {zPos=z;}
-    void set_x_r(double xR) {xRot=xR;}
-    void set_y_r(double yR) {yRot=yR;}
-    void set_z_r(double zR) {zRot=zR;}
-    void set_a_r(double aR) {aRot=aR;}
+    Object * getObjectPtr() {return &object;}
     /* IO */
     void write(std::ofstream& fout);
     void read(std::ifstream& fin);
 private:
     /* STATE DATA */
-    unsigned objectID;
-    double xPos;    // x position
-    double yPos;    // y position
-    double zPos;    // z position
-    double xRot;    // x of rotation vector
-    double yRot;    // y of rotation vector
-    double zRot;    // z of rotation vector
-    double aRot;    // angle of rotation
+    Object object;
 };
 
 class FrameState {
@@ -67,16 +92,13 @@ public:
     ~FrameState();
     void set_frame_id(unsigned id) {frameID = id;}
     unsigned get_frame_id()        {return frameID;}
-    unsigned get_num_objects()     {return objects.size();}
-    ObjectState * get_object(unsigned i);
-    void add_object(Vec3 * p);
-    void add_object(Vec3 p);
-    void add_object(Vec3 positions, Vec3 rotationVector, double rotationAngle);
-    void add_object(ObjectState * o);
+    unsigned get_num_objects()     {return objectRecords.size();}
+    Object * get_object(unsigned i);
+    void add_object(Object * object);
     void write(std::ofstream& fout);
     void read(std::ifstream& fin);
 private:
-    std::vector<ObjectState *> objects;
+    std::vector<ObjectRecord *> objectRecords;
     unsigned frameID;
     void write_header(std::ofstream& fout);
     void read_header(std::ifstream& fin);
@@ -88,7 +110,7 @@ public:
     TimeSeries();
     ~TimeSeries();
     /* Recording */
-    void record_frame(Vec3 * positions, Vec3 * rotationVectors, double * rotationAngles, unsigned n);
+    void record_frame(Object * objects, unsigned n);
     void write(const char * filename);
     /* Reading */
     void read(const char * filename);
@@ -105,7 +127,6 @@ class Model {
 public:
     Model(unsigned n);
     ~Model();
-    void get_next_object_state(Vec3 ** pos, Vec3 ** rotationVector, double ** rotationAngle);
     void set_filename(char * newFilename);
     unsigned get_num_objects() {return nObjects;}
     void init();
@@ -120,16 +141,10 @@ private:
     char * recordFilename;
     TimeSeries timeseries;
     unsigned nObjects;
-    /* State data */
-    Vec3 * positions;
-    Vec3 * rotationVectors;
-    double * rotationAngles;
-    /* Transitional data */
-    Vec3 * velocities;
-    double * rotationalVelocities;
-    /* Model-specific data */
-    double * lengths; 
-    double * angles;
+
+    Object * objects;
 
 };
+
+
 #endif
